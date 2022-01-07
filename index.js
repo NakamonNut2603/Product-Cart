@@ -167,8 +167,6 @@ router.post('/productinfo', function (req, res) { //wait for DB to fix
             "sku": "",
             "isAvailable": 1,
             "sold_amount": 0,
-            "create_time": "",
-            "update_time": "",
             "materialID": "",
             "sub_detailID": "",
             "shopID": ""
@@ -199,6 +197,8 @@ router.post('/updateproduct', function (req, res) { //wait for DB to fix
     let sub_detail = req.body.sub_detail;
     let materialID = product.materialID;
     let material = req.body.material;
+    let curDateTime = currenDateTime();
+    product.update_time = curDateTime;
     connection.query('UPDATE product SET ? WHERE productID = ?', [product, productID], function (error, results) {
         if (error){
             console.log(error);
@@ -236,8 +236,6 @@ router.post('/updateproduct', function (req, res) { //wait for DB to fix
             "sku": "00000000000000000021",
             "isAvailable": 1,
             "sold_amount": 0,
-            "create_time": "2022-01-06",
-            "update_time": "2022-01-06",
             "materialID": "m000002",
             "sub_detailID": "sd00002",
             "shopID": "test001"
@@ -262,10 +260,12 @@ router.post('/updateproduct', function (req, res) { //wait for DB to fix
     }
 */
 router.post('/addproduct', function (req, res) { //wait for DB to fix
-    console.log(req.body);
     let product = req.body.product;
     let sub_detail = req.body.sub_detail;
     let material = req.body.material;
+    let curDateTime = currenDateTime();
+    product.create_time = curDateTime;
+    product.update_time = curDateTime;
     connection.query('INSERT INTO sub_detail SET ? ', sub_detail, function (error, results) {
         if (error){
             console.log(error);
@@ -325,9 +325,6 @@ router.delete('/deleteproduct', function (req, res) { //not sure wait for meetin
         });
         
     });
-    
-    
-    
 });
 
 // router.post('/favorite', function (req, res) {
@@ -346,9 +343,28 @@ router.delete('/deleteproduct', function (req, res) { //not sure wait for meetin
     
 // });
 
-// router.post('/addtocart', function (req, res) {
-    
-// });
+router.post('/addtocart', function (req, res) {
+    let cart_item  = req.body.cart_item;
+    let productID = cart_item.productID;
+    let shopID = cart_item.shopID;
+    connection.query('SELECT * FROM product WHERE productID = ?', productID, function (error, results) {
+        if (error){
+            console.log(error);
+            return res.send({error: true, message: `add product ${productID} to cart unsuccessfully`});
+        } 
+        let product = results[0];
+        connection.query('SELECT * FROM cart WHERE cartID = ?', cart.cartID, function (error, results) {
+            if (error){
+                console.log(error);
+                return res.send({error: true, message: `add product ${productID} to cart unsuccessfully`});
+            } 
+            let cart = results[0];
+            if(cart_item.quantity >= product.min_unit) {
+                cart.total += product.price;
+            }
+        });
+    });return res.send({error: false, message: `update product ${productID} to cart successfully`});
+});
 
 // router.post('/updatecart', function (req, res) {
     
@@ -389,3 +405,18 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
     console.log(`Our app is running on port ${ PORT }`);
 });
+
+function currenDateTime() {
+    let date_ob = new Date();
+
+    let date = ("0" + date_ob.getDate()).slice(-2);
+    let month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+    let year = date_ob.getFullYear();
+
+    let hours = date_ob.getHours();
+    let minutes = date_ob.getMinutes();
+    let seconds = date_ob.getSeconds();
+
+    let curDateTime = year + "-" + month + "-" + date + " " + hours + ":" + minutes + ":" + seconds;
+    return curDateTime;
+}
